@@ -1,6 +1,8 @@
 """Define coordinate system and grid."""
-from typing import Optional, List
 from enum import Enum
+from enum import auto
+from typing import List
+from typing import Optional
 
 import fightgrid.config as cfg
 
@@ -8,12 +10,16 @@ import fightgrid.config as cfg
 class Direction(Enum):
     """Direction for reference and moving entities."""
 
-    UP = 1
-    DOWN = 2
-    LEFT = 3
-    RIGHT = 4
-    FLIP = 5
-    NONE = 6
+    UP = auto()
+    DOWN = auto()
+    LEFT = auto()
+    RIGHT = auto()
+    UP_LEFT = auto()
+    UP_RIGHT = auto()
+    DOWN_LEFT = auto()
+    DOWN_RIGHT = auto()
+    FLIP = auto()
+    NONE = auto()
 
 
 class Square:
@@ -34,10 +40,10 @@ class Square:
 
     def __eq__(self: "Square", other: object) -> bool:
         """Test equality."""
-        return bool(
+        return (
             self.x == other.x and self.y == other.y
             if isinstance(other, Square)
-            else NotImplemented
+            else False
         )
 
     def __repr__(self) -> str:
@@ -62,19 +68,25 @@ class Grid:
         """Given x and y coordinates, return the Square from the grid."""
         return self._grid[y][x]
 
-    def moved(self, sq: Square, direction: Direction, distance: int = 1) -> Square:
-        """Returns a new point at the projected location. Does not modify original."""
+    def projected_from(
+        self, sq: Square, direction: Direction, distance: int = 1
+    ) -> Optional[Square]:
+        """Returns Square from grid a distance and direction away."""
+        if not sq:
+            raise ValueError("Starting Square cannot be None.")
         if direction == Direction.UP:
-            return Square(y=(sq.y - distance), x=sq.x)
+            p = Square(y=(sq.y - distance), x=sq.x)
+            return self.get_square(p) if self.square_valid(p) else None
         if direction == Direction.DOWN:
-            return Square(y=(sq.y + distance), x=sq.x)
+            p = Square(y=(sq.y + distance), x=sq.x)
+            return self.get_square(p) if self.square_valid(p) else None
         if direction == Direction.LEFT:
-            return Square(y=sq.y, x=(sq.x - distance))
+            p = Square(y=sq.y, x=(sq.x - distance))
+            return self.get_square(p) if self.square_valid(p) else None
         if direction == Direction.RIGHT:
-            return Square(y=sq.y, x=(sq.x + distance))
+            p = Square(y=sq.y, x=(sq.x + distance))
+            return self.get_square(p) if self.square_valid(p) else None
         raise ValueError("Invalid direction given, can't project movement.")
-
-    # TODO Convert following self into square
 
     def square_valid(self, sq: Square) -> bool:
         """Returns True if point is within grid bounds."""
@@ -86,36 +98,36 @@ class Grid:
 
     def above(self, sq: Square) -> Optional[Square]:
         """Return Square with coords above self."""
-        return None if sq.y < 1 else Square(sq.x, sq.y - 1)
+        return None if sq.y < 1 else self.get_square_xy(sq.x, sq.y - 1)
 
     def left(self, sq: Square) -> Optional[Square]:
-        return None if sq.x < 1 else Square(sq.x - 1, sq.y)
+        return None if sq.x < 1 else self.get_square_xy(sq.x - 1, sq.y)
 
     def upper_left(self, sq: Square) -> Optional[Square]:
         if sq.y < 1 or sq.x < 1:
             return None
-        return Square(x=sq.x - 1, y=sq.y - 1)
+        return self.get_square_xy(x=sq.x - 1, y=sq.y - 1)
 
     def upper_right(self, sq: Square) -> Optional[Square]:
         if sq.y < 1 or sq.x > cfg.GRID_SIZE - 2:
             return None
-        return Square(x=sq.x + 1, y=sq.y - 1)
+        return self.get_square_xy(x=sq.x + 1, y=sq.y - 1)
 
     def lower_left(self, sq: Square) -> Optional[Square]:
         if sq.y > cfg.GRID_SIZE - 2 or sq.x < 1:
             return None
-        return Square(x=sq.x - 1, y=sq.y + 1)
+        return self.get_square_xy(x=sq.x - 1, y=sq.y + 1)
 
     def lower_right(self, sq: Square) -> Optional[Square]:
         if sq.y > cfg.GRID_SIZE - 2 or sq.x > cfg.GRID_SIZE - 2:
             return None
-        return Square(x=sq.x + 1, y=sq.y + 1)
+        return self.get_square_xy(x=sq.x + 1, y=sq.y + 1)
 
     def right(self, sq: Square) -> Optional[Square]:
-        return None if sq.x > cfg.GRID_SIZE - 2 else Square(sq.x + 1, sq.y)
+        return None if sq.x > cfg.GRID_SIZE - 2 else self.get_square_xy(sq.x + 1, sq.y)
 
     def below(self, sq: Square) -> Optional[Square]:
-        return None if sq.y > cfg.GRID_SIZE - 2 else Square(sq.x, sq.y + 1)
+        return None if sq.y > cfg.GRID_SIZE - 2 else self.get_square_xy(sq.x, sq.y + 1)
 
     def surrounding_points(self, sq: Square) -> List[Square]:
         funcs = [self.above, self.left, self.right, self.below]
