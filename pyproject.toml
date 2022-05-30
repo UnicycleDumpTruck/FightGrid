@@ -21,6 +21,9 @@ Changelog = "https://github.com/UnicycleDumpTruck/FightGrid/releases"
 [tool.poetry.dependencies]
 python = "^3.7"
 click = ">=8.0.1"
+tomli = "^2.0.1"
+loguru = "^0.6.0"
+rich = "^12.4.4"
 
 [tool.poetry.dev-dependencies]
 Pygments = ">=2.10.0"
