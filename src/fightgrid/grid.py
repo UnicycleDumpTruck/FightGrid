@@ -29,13 +29,15 @@ class Square:
         self,
         x: int,
         y: int,
-        label: Optional[str] = None,
+        pub_label: Optional[str] = None,
+        prv_label: Optional[str] = None,
         highlight: Optional[str] = None,
     ) -> None:
         """Initialize grid Square with at least x and y."""
         self.x = x
         self.y = y
-        self.label = label
+        self.pub_label = pub_label
+        self.prv_label = prv_label
         self.highlight = highlight
 
     def __eq__(self: "Square", other: object) -> bool:
@@ -48,20 +50,29 @@ class Square:
 
     def __repr__(self) -> str:
         """Represent Square object as string."""
-        return f"Sq x:{self.x} y:{self.y} lbl:{self.label} hl:{self.highlight}"
+        return f"Sq x{self.x} y{self.y} pub:{self.pub_label} prv:{self.prv_label}"
 
 
 class Grid:
     """Grid of Squares."""
 
-    def __init__(self, side_length: int = cfg.GRID_SIZE) -> None:
+    def __init__(
+        self,
+        side_length: int = cfg.GRID_SIZE,
+        def_pub_label: Optional[str] = None,
+        def_prv_label: Optional[str] = None,
+    ) -> None:
         """Initialize Grid."""
         self._grid = [
-            [Square(x, y) for x in range(cfg.GRID_SIZE)] for y in range(cfg.GRID_SIZE)
+            [
+                Square(x, y, pub_label=def_pub_label, prv_label=def_prv_label)
+                for x in range(side_length)
+            ]
+            for y in range(side_length)
         ]
 
     def get_square(self, sq: Square) -> Square:
-        """Given Square, return Square from grid with same x & y. Label and hl may differ."""
+        """Given Square, return Square from grid with same x & y."""
         return self._grid[sq.y][sq.x]
 
     def get_square_xy(self, x: int, y: int) -> Square:
@@ -72,13 +83,25 @@ class Grid:
         self, sq: Square, direction: Direction, distance: int = 1
     ) -> Optional[Square]:
         """Returns Square from grid a distance and direction away."""
-        if not sq:
-            raise ValueError("Starting Square cannot be None.")
+        # if not sq:
+        #     raise ValueError("Starting Square cannot be None.")
         if direction == Direction.UP:
             p = Square(y=(sq.y - distance), x=sq.x)
             return self.get_square(p) if self.square_valid(p) else None
+        if direction == Direction.UP_LEFT:
+            p = Square(y=(sq.y - distance), x=(sq.x - distance))
+            return self.get_square(p) if self.square_valid(p) else None
+        if direction == Direction.UP_RIGHT:
+            p = Square(y=(sq.y - distance), x=(sq.x + distance))
+            return self.get_square(p) if self.square_valid(p) else None
         if direction == Direction.DOWN:
             p = Square(y=(sq.y + distance), x=sq.x)
+            return self.get_square(p) if self.square_valid(p) else None
+        if direction == Direction.DOWN_LEFT:
+            p = Square(y=(sq.y + distance), x=(sq.x - 1))
+            return self.get_square(p) if self.square_valid(p) else None
+        if direction == Direction.DOWN_RIGHT:
+            p = Square(y=(sq.y + distance), x=(sq.x + 1))
             return self.get_square(p) if self.square_valid(p) else None
         if direction == Direction.LEFT:
             p = Square(y=sq.y, x=(sq.x - distance))
@@ -86,7 +109,8 @@ class Grid:
         if direction == Direction.RIGHT:
             p = Square(y=sq.y, x=(sq.x + distance))
             return self.get_square(p) if self.square_valid(p) else None
-        raise ValueError("Invalid direction given, can't project movement.")
+        return None
+        # raise ValueError("Invalid direction given, can't project movement.")
 
     def square_valid(self, sq: Square) -> bool:
         """Returns True if point is within grid bounds."""
@@ -96,51 +120,47 @@ class Grid:
             return False
         return True
 
-    def above(self, sq: Square) -> Optional[Square]:
-        """Return Square with coords above self."""
-        return None if sq.y < 1 else self.get_square_xy(sq.x, sq.y - 1)
-
-    def left(self, sq: Square) -> Optional[Square]:
-        return None if sq.x < 1 else self.get_square_xy(sq.x - 1, sq.y)
-
-    def upper_left(self, sq: Square) -> Optional[Square]:
-        if sq.y < 1 or sq.x < 1:
-            return None
-        return self.get_square_xy(x=sq.x - 1, y=sq.y - 1)
-
-    def upper_right(self, sq: Square) -> Optional[Square]:
-        if sq.y < 1 or sq.x > cfg.GRID_SIZE - 2:
-            return None
-        return self.get_square_xy(x=sq.x + 1, y=sq.y - 1)
-
-    def lower_left(self, sq: Square) -> Optional[Square]:
-        if sq.y > cfg.GRID_SIZE - 2 or sq.x < 1:
-            return None
-        return self.get_square_xy(x=sq.x - 1, y=sq.y + 1)
-
-    def lower_right(self, sq: Square) -> Optional[Square]:
-        if sq.y > cfg.GRID_SIZE - 2 or sq.x > cfg.GRID_SIZE - 2:
-            return None
-        return self.get_square_xy(x=sq.x + 1, y=sq.y + 1)
-
-    def right(self, sq: Square) -> Optional[Square]:
-        return None if sq.x > cfg.GRID_SIZE - 2 else self.get_square_xy(sq.x + 1, sq.y)
-
-    def below(self, sq: Square) -> Optional[Square]:
-        return None if sq.y > cfg.GRID_SIZE - 2 else self.get_square_xy(sq.x, sq.y + 1)
-
-    def surrounding_points(self, sq: Square) -> List[Square]:
-        funcs = [self.above, self.left, self.right, self.below]
-        surrounding = [f(sq) for f in funcs]
+    def surrounding_squares(self, sq: Square) -> List[Square]:
+        """Return Squares that are up, down, left, right from given."""
+        surrounding = [
+            self.projected_from(sq, Direction.UP),
+            self.projected_from(sq, Direction.LEFT),
+            self.projected_from(sq, Direction.RIGHT),
+            self.projected_from(sq, Direction.DOWN),
+        ]
         return list(filter(None, surrounding))
 
-    def reticle_points(self, sq: Square) -> List[Square]:
-        """Return out corner surrounding squares."""
-        funcs = [
-            self.upper_left,
-            self.lower_left,
-            self.upper_right,
-            self.lower_right,
+    def reticle_squares(self, sq: Square) -> List[Square]:
+        """Return all surrounding squares."""
+        corners = [
+            self.projected_from(sq, Direction.UP_LEFT),
+            self.projected_from(sq, Direction.UP),
+            self.projected_from(sq, Direction.UP_RIGHT),
+            self.projected_from(sq, Direction.LEFT),
+            self.projected_from(sq, Direction.RIGHT),
+            self.projected_from(sq, Direction.DOWN_LEFT),
+            self.projected_from(sq, Direction.DOWN),
+            self.projected_from(sq, Direction.DOWN_RIGHT),
         ]
-        corners = [f(sq) for f in funcs]
         return list(filter(None, corners))
+
+    def grid_string_labels(self, prv: Optional[bool] = False) -> str:
+        """Return simple string representation of grid.
+
+        Args:
+        prv (bool, optional): Flag to show private label
+        for each square. Defaults to False, showing each
+        square's public label.
+
+        Returns:
+        str: String representation of grid. Spaces between
+        squares on a row, newlines between rows.
+        """
+        return "\n".join(
+            " ".join([(s.prv_label if prv else s.pub_label) or " " for s in row])
+            for row in self._grid
+        )
+
+    def __repr__(self) -> str:
+        """Return a string representation of Grid."""
+        return self.grid_string_labels()
