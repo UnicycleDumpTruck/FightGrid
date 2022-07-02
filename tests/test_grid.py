@@ -19,7 +19,7 @@ def test_create_square() -> None:
     assert sq.pub_label == "T"
     assert sq.prv_label == "X"
     assert sq.highlight == "y"
-    assert sq.__repr__() == "Sq x0 y1 pub:T prv:X"
+    assert sq.__repr__() == "Sq x0 y1 pub:T prv:X state:EMPTY"
 
 
 def test_create_grid(default_grid: grid.Grid) -> None:

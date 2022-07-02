@@ -22,6 +22,16 @@ class Direction(Enum):
     NONE = auto()
 
 
+class SqState(Enum):
+    """General state of Grid Square."""
+
+    EMPTY = auto()
+    HIDDEN = auto()
+    HIT = auto()
+    MISS = auto()
+    SUNK = auto()
+
+
 class Square:
     """A single location on the grid."""
 
@@ -39,6 +49,7 @@ class Square:
         self.pub_label = pub_label
         self.prv_label = prv_label
         self.highlight = highlight
+        self.state = SqState.EMPTY
 
     def __eq__(self: "Square", other: object) -> bool:
         """Test equality."""
@@ -50,7 +61,8 @@ class Square:
 
     def __repr__(self) -> str:
         """Represent Square object as string."""
-        return f"Sq x{self.x} y{self.y} pub:{self.pub_label} prv:{self.prv_label}"
+        state_str = str(self.state).split(".")[1]
+        return f"Sq x{self.x} y{self.y} pub:{self.pub_label} prv:{self.prv_label} state:{state_str}"
 
 
 class Grid:
